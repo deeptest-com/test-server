@@ -29,8 +29,8 @@ func main() {
 	})
 
 	// 启动HTTP服务器监听指定端口（例如8080）
-	fmt.Println("WebSocket服务启动，监听端口8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil { // 使用默认的HTTP服务器处理请求和WebSocket连接
+	fmt.Println("WebSocket服务启动，监听端口9090...")
+	if err := http.ListenAndServe(":9090", nil); err != nil { // 使用默认的HTTP服务器处理请求和WebSocket连接
 		fmt.Println("HTTP服务器启动失败:", err) // 如果启动失败，打印错误信息给用户看或记录日志中。这里只是简单打印到控制台。实际生产环境中需要更复杂的错误处理逻辑。
 	}
 }
