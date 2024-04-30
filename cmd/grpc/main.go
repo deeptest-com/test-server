@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/aaronchen2k/deeptest/grpc/service"
+	"github.com/aaronchen2k/deeptest/cmd/grpc/service"
 	dtproto "github.com/aaronchen2k/deeptest/proto"
 	"log"
 	"net"
