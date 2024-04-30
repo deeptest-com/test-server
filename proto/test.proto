@@ -1,0 +1,23 @@
+syntax = "proto3";
+package ptproto;
+option go_package = "/dtproto";
+
+service TestService {
+  rpc TestBidirectional (stream TestData) returns (stream TestResponse){};
+  rpc TestUnidirectional (TestData) returns (TestResponse);
+}
+
+message TestRequest {
+  string action = 1;
+  TestData data = 2;
+}
+
+message TestResponse {
+  int32 code = 1;
+  TestData data = 2;
+}
+
+message TestData {
+  string username = 1;
+  string email = 2;
+}
