@@ -1,6 +1,6 @@
 module github.com/aaronchen2k/deeptest
 
-go 1.21
+go 1.17
 
 require (
 	github.com/gorilla/websocket v1.5.1
