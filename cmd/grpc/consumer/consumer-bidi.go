@@ -26,9 +26,14 @@ func main() {
 
 	// send
 	go func() {
-		for true {
+		for i := 0; i < 10; i++ {
+			act := "do"
+			if i == 8 {
+				act = "stop"
+			}
+
 			err = stream.Send(&dtproto.TestRequest{
-				Action: "act",
+				Action: act,
 				Data:   "===",
 			})
 		}

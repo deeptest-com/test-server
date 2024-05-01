@@ -5,6 +5,7 @@ import (
 	dtproto "github.com/aaronchen2k/deeptest/proto"
 	"io"
 	"log"
+	"sync"
 )
 
 type GrpcService struct {
@@ -13,25 +14,48 @@ type GrpcService struct {
 }
 
 func (s *GrpcService) TestBidi(server dtproto.TestService_TestBidiServer) (err error) {
-	for {
-		req, err := server.Recv()
-		if err == io.EOF {
-			log.Println("end of stream")
-			break
-		}
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-		log.Printf("got msg from grpc client %v", req)
+	finish := false
 
-		resp := dtproto.TestResponse{
-			Code:   456,
-			Result: "success",
-		}
+	go func() {
+		for {
+			req, err := server.Recv()
+			if err == io.EOF {
+				log.Println("end of stream")
+				//break
+			}
 
-		err = server.Send(&resp)
-		if err != nil {
-			log.Printf("send msg error %v", err)
+			log.Printf("got msg from grpc client %v", req)
+
+			if req.Action == "stop" {
+				finish = true
+				wg.Done()
+				break
+			}
 		}
-	}
+	}()
+
+	go func() {
+		for true {
+			resp := dtproto.TestResponse{
+				Code:   456,
+				Result: "success",
+			}
+
+			err = server.Send(&resp)
+			if err != nil {
+				log.Printf("send msg error %v", err)
+			}
+
+			if finish {
+				break
+			}
+		}
+	}()
+
+	wg.Wait()
 
 	return
 }
