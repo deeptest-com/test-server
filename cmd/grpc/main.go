@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/aaronchen2k/deeptest/cmd/grpc/service"
+	"github.com/aaronchen2k/deeptest/cmd/grpc/producer"
 	dtproto "github.com/aaronchen2k/deeptest/proto"
 	"log"
 	"net"
@@ -21,7 +21,7 @@ func main() {
 
 func startGrpcServe() {
 	server := grpc.NewServer()
-	dtproto.RegisterTestServiceServer(server, &service.GrpcService{})
+	dtproto.RegisterTestServiceServer(server, &producer.GrpcService{})
 	reflection.Register(server)
 
 	lis, err := net.Listen("tcp", port)

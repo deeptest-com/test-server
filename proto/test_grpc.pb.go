@@ -22,8 +22,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TestServiceClient interface {
-	TestBidirectional(ctx context.Context, opts ...grpc.CallOption) (TestService_TestBidirectionalClient, error)
-	TestUnidirectional(ctx context.Context, in *TestData, opts ...grpc.CallOption) (*TestResponse, error)
+	TestBidi(ctx context.Context, opts ...grpc.CallOption) (TestService_TestBidiClient, error)
+	TestServerStream(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (TestService_TestServerStreamClient, error)
+	TestClientStream(ctx context.Context, opts ...grpc.CallOption) (TestService_TestClientStreamClient, error)
+	TestUnary(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (*TestResponse, error)
 }
 
 type testServiceClient struct {
@@ -34,30 +36,30 @@ func NewTestServiceClient(cc grpc.ClientConnInterface) TestServiceClient {
 	return &testServiceClient{cc}
 }
 
-func (c *testServiceClient) TestBidirectional(ctx context.Context, opts ...grpc.CallOption) (TestService_TestBidirectionalClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[0], "/ptproto.TestService/TestBidirectional", opts...)
+func (c *testServiceClient) TestBidi(ctx context.Context, opts ...grpc.CallOption) (TestService_TestBidiClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[0], "/ptproto.TestService/TestBidi", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &testServiceTestBidirectionalClient{stream}
+	x := &testServiceTestBidiClient{stream}
 	return x, nil
 }
 
-type TestService_TestBidirectionalClient interface {
-	Send(*TestData) error
+type TestService_TestBidiClient interface {
+	Send(*TestRequest) error
 	Recv() (*TestResponse, error)
 	grpc.ClientStream
 }
 
-type testServiceTestBidirectionalClient struct {
+type testServiceTestBidiClient struct {
 	grpc.ClientStream
 }
 
-func (x *testServiceTestBidirectionalClient) Send(m *TestData) error {
+func (x *testServiceTestBidiClient) Send(m *TestRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *testServiceTestBidirectionalClient) Recv() (*TestResponse, error) {
+func (x *testServiceTestBidiClient) Recv() (*TestResponse, error) {
 	m := new(TestResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -65,9 +67,75 @@ func (x *testServiceTestBidirectionalClient) Recv() (*TestResponse, error) {
 	return m, nil
 }
 
-func (c *testServiceClient) TestUnidirectional(ctx context.Context, in *TestData, opts ...grpc.CallOption) (*TestResponse, error) {
+func (c *testServiceClient) TestServerStream(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (TestService_TestServerStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[1], "/ptproto.TestService/TestServerStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testServiceTestServerStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestService_TestServerStreamClient interface {
+	Recv() (*TestResponse, error)
+	grpc.ClientStream
+}
+
+type testServiceTestServerStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *testServiceTestServerStreamClient) Recv() (*TestResponse, error) {
+	m := new(TestResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testServiceClient) TestClientStream(ctx context.Context, opts ...grpc.CallOption) (TestService_TestClientStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestService_ServiceDesc.Streams[2], "/ptproto.TestService/TestClientStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testServiceTestClientStreamClient{stream}
+	return x, nil
+}
+
+type TestService_TestClientStreamClient interface {
+	Send(*TestRequest) error
+	CloseAndRecv() (*TestResponse, error)
+	grpc.ClientStream
+}
+
+type testServiceTestClientStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *testServiceTestClientStreamClient) Send(m *TestRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testServiceTestClientStreamClient) CloseAndRecv() (*TestResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(TestResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testServiceClient) TestUnary(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (*TestResponse, error) {
 	out := new(TestResponse)
-	err := c.cc.Invoke(ctx, "/ptproto.TestService/TestUnidirectional", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ptproto.TestService/TestUnary", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -78,19 +146,27 @@ func (c *testServiceClient) TestUnidirectional(ctx context.Context, in *TestData
 // All implementations should embed UnimplementedTestServiceServer
 // for forward compatibility
 type TestServiceServer interface {
-	TestBidirectional(TestService_TestBidirectionalServer) error
-	TestUnidirectional(context.Context, *TestData) (*TestResponse, error)
+	TestBidi(TestService_TestBidiServer) error
+	TestServerStream(*TestRequest, TestService_TestServerStreamServer) error
+	TestClientStream(TestService_TestClientStreamServer) error
+	TestUnary(context.Context, *TestRequest) (*TestResponse, error)
 }
 
 // UnimplementedTestServiceServer should be embedded to have forward compatible implementations.
 type UnimplementedTestServiceServer struct {
 }
 
-func (UnimplementedTestServiceServer) TestBidirectional(TestService_TestBidirectionalServer) error {
-	return status.Errorf(codes.Unimplemented, "method TestBidirectional not implemented")
+func (UnimplementedTestServiceServer) TestBidi(TestService_TestBidiServer) error {
+	return status.Errorf(codes.Unimplemented, "method TestBidi not implemented")
 }
-func (UnimplementedTestServiceServer) TestUnidirectional(context.Context, *TestData) (*TestResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TestUnidirectional not implemented")
+func (UnimplementedTestServiceServer) TestServerStream(*TestRequest, TestService_TestServerStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method TestServerStream not implemented")
+}
+func (UnimplementedTestServiceServer) TestClientStream(TestService_TestClientStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method TestClientStream not implemented")
+}
+func (UnimplementedTestServiceServer) TestUnary(context.Context, *TestRequest) (*TestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestUnary not implemented")
 }
 
 // UnsafeTestServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -104,46 +180,93 @@ func RegisterTestServiceServer(s grpc.ServiceRegistrar, srv TestServiceServer) {
 	s.RegisterService(&TestService_ServiceDesc, srv)
 }
 
-func _TestService_TestBidirectional_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(TestServiceServer).TestBidirectional(&testServiceTestBidirectionalServer{stream})
+func _TestService_TestBidi_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestServiceServer).TestBidi(&testServiceTestBidiServer{stream})
 }
 
-type TestService_TestBidirectionalServer interface {
+type TestService_TestBidiServer interface {
 	Send(*TestResponse) error
-	Recv() (*TestData, error)
+	Recv() (*TestRequest, error)
 	grpc.ServerStream
 }
 
-type testServiceTestBidirectionalServer struct {
+type testServiceTestBidiServer struct {
 	grpc.ServerStream
 }
 
-func (x *testServiceTestBidirectionalServer) Send(m *TestResponse) error {
+func (x *testServiceTestBidiServer) Send(m *TestResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *testServiceTestBidirectionalServer) Recv() (*TestData, error) {
-	m := new(TestData)
+func (x *testServiceTestBidiServer) Recv() (*TestRequest, error) {
+	m := new(TestRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func _TestService_TestUnidirectional_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TestData)
+func _TestService_TestServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(TestRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestServiceServer).TestServerStream(m, &testServiceTestServerStreamServer{stream})
+}
+
+type TestService_TestServerStreamServer interface {
+	Send(*TestResponse) error
+	grpc.ServerStream
+}
+
+type testServiceTestServerStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *testServiceTestServerStreamServer) Send(m *TestResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestService_TestClientStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestServiceServer).TestClientStream(&testServiceTestClientStreamServer{stream})
+}
+
+type TestService_TestClientStreamServer interface {
+	SendAndClose(*TestResponse) error
+	Recv() (*TestRequest, error)
+	grpc.ServerStream
+}
+
+type testServiceTestClientStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *testServiceTestClientStreamServer) SendAndClose(m *TestResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testServiceTestClientStreamServer) Recv() (*TestRequest, error) {
+	m := new(TestRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _TestService_TestUnary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TestRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TestServiceServer).TestUnidirectional(ctx, in)
+		return srv.(TestServiceServer).TestUnary(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ptproto.TestService/TestUnidirectional",
+		FullMethod: "/ptproto.TestService/TestUnary",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TestServiceServer).TestUnidirectional(ctx, req.(*TestData))
+		return srv.(TestServiceServer).TestUnary(ctx, req.(*TestRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -156,15 +279,25 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TestServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "TestUnidirectional",
-			Handler:    _TestService_TestUnidirectional_Handler,
+			MethodName: "TestUnary",
+			Handler:    _TestService_TestUnary_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "TestBidirectional",
-			Handler:       _TestService_TestBidirectional_Handler,
+			StreamName:    "TestBidi",
+			Handler:       _TestService_TestBidi_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "TestServerStream",
+			Handler:       _TestService_TestServerStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "TestClientStream",
+			Handler:       _TestService_TestClientStream_Handler,
 			ClientStreams: true,
 		},
 	},

@@ -18,28 +18,12 @@ func main() {
 
 	client := dtproto.NewTestServiceClient(connect)
 
-	stream, err := client.TestBidirectional(context.Background())
+	stream, err := client.TestClientStream(context.Background())
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
 
-	// send
-	go func() {
-		for true {
-			err = stream.Send(&dtproto.TestData{
-				Username: "aaron",
-				Email:    "462826@qq.com",
-			})
-		}
-
-		err := stream.CloseSend()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
-
-	// recv
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -47,12 +31,10 @@ func main() {
 		defer wg.Done()
 
 		for true {
-			resp, err := stream.Recv()
-			//if err == io.EOF {
-			//	break
-			//}
-
-			log.Println(fmt.Sprintf("get msg from grpc producer %v", resp))
+			err = stream.Send(&dtproto.TestRequest{
+				Action: "act",
+				Data:   "===",
+			})
 
 			if err != nil {
 				continue
@@ -61,6 +43,9 @@ func main() {
 
 		stream.CloseSend()
 	}()
+
+	resp, err := stream.CloseAndRecv()
+	log.Println(fmt.Sprintf("get msg from grpc producer %v", resp))
 
 	wg.Wait()
 }
