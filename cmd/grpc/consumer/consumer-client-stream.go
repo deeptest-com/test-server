@@ -30,13 +30,19 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		for true {
+		for i := 0; i < 10; i++ {
+			act := "do"
+			if i == 3 {
+				act = "stop"
+			}
+
 			err = stream.Send(&dtproto.TestRequest{
-				Action: "act",
-				Data:   "===",
+				Action: act,
+				Data:   "=== client-stream",
 			})
 
 			if err != nil {
+				log.Printf("send msg error %v", err)
 				continue
 			}
 		}
@@ -44,8 +50,8 @@ func main() {
 		stream.CloseSend()
 	}()
 
+	wg.Wait()
+
 	resp, err := stream.CloseAndRecv()
 	log.Println(fmt.Sprintf("get msg from grpc producer %v", resp))
-
-	wg.Wait()
 }

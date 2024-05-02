@@ -21,7 +21,7 @@ func main() {
 
 	req := dtproto.TestRequest{
 		Action: "act",
-		Data:   "===",
+		Data:   "=== server-stream",
 	}
 
 	stream, err := client.TestServerStream(context.Background(), &req)

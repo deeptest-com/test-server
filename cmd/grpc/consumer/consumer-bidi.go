@@ -6,6 +6,7 @@ import (
 	dtproto "github.com/aaronchen2k/deeptest/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"io"
 	"log"
 	"sync"
 )
@@ -28,7 +29,7 @@ func main() {
 	go func() {
 		for i := 0; i < 10; i++ {
 			act := "do"
-			if i == 8 {
+			if i == 3 {
 				act = "stop"
 			}
 
@@ -53,9 +54,9 @@ func main() {
 
 		for true {
 			resp, err := stream.Recv()
-			//if err == io.EOF {
-			//	break
-			//}
+			if err == io.EOF {
+				break
+			}
 
 			log.Println(fmt.Sprintf("get msg from grpc producer %v", resp))
 

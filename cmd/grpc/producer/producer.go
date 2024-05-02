@@ -27,7 +27,7 @@ func (s *GrpcService) TestBidi(server dtproto.TestService_TestBidiServer) (err e
 				//break
 			}
 
-			log.Printf("got msg from grpc client %v", req)
+			log.Printf("got msg from grpc consumer %v", req)
 
 			if req.Action == "stop" {
 				finish = true
@@ -72,6 +72,8 @@ func (s *GrpcService) TestServerStream(req *dtproto.TestRequest, server dtproto.
 		err = server.Send(&resp)
 		if err != nil {
 			log.Printf("send msg error %v", err)
+
+			break
 		}
 	}
 
@@ -87,6 +89,10 @@ func (s *GrpcService) TestClientStream(server dtproto.TestService_TestClientStre
 		}
 
 		log.Printf("got msg from grpc client %v", req)
+
+		if req.Action == "stop" {
+			break
+		}
 	}
 
 	resp := dtproto.TestResponse{
