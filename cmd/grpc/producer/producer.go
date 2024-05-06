@@ -81,7 +81,7 @@ func (s *GrpcService) TestServerStream(req *dtproto.TestRequest, server dtproto.
 }
 
 func (s *GrpcService) TestClientStream(server dtproto.TestService_TestClientStreamServer) (err error) {
-	for {
+	for i := 0; i < 10; i++ {
 		req, err := server.Recv()
 		if err == io.EOF {
 			log.Println("end of stream")

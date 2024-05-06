@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -30,7 +31,8 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 6; i++ {
+			time.Sleep(2 * time.Second)
 			act := "do"
 			if i == 3 {
 				act = "stop"
@@ -43,7 +45,7 @@ func main() {
 
 			if err != nil {
 				log.Printf("send msg error %v", err)
-				continue
+				break
 			}
 		}
 
