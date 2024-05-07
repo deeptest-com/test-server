@@ -2,5 +2,14 @@ protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=p
   --go-grpc_opt=require_unimplemented_servers=false \
   proto/test.proto
 
- nohup go run cmd/websocket/main.go > websocket.log 2>&1 &
- nohup go run cmd/grpc/main.go > grpc.log 2>&1 &
+ps -ef | grep -v grep | grep 'go run cmd/websocket/main.go' | awk '{print $2}' | xargs --no-run-if-empty kill -9 \
+    && nohup go run cmd/websocket/main.go > websocket.log 2>&1 &
+
+ps -ef | grep -v grep | grep 'go run cmd/websocket/main.go' | awk '{print $2}' | xargs --no-run-if-empty kill -9 \
+    && nohup go run cmd/grpc/main.go > grpc.log 2>&1 &
+
+
+lsof -i :9090 | grep :9090 | awk '{print $2}'  | xargs --no-run-if-empty kill -9 \
+    && nohup go run cmd/websocket/main.go > websocket.log 2>&1 &
+lsof -i :9528 | grep :9528 | awk '{print $2}'  | xargs --no-run-if-empty kill -9 \
+    && nohup go run cmd/grpc/main.go > grpc.log 2>&1 &
