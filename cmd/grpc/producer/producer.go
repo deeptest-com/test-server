@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 )
 
 type GrpcService struct {
@@ -25,21 +26,22 @@ func (s *GrpcService) TestBidi(server dtproto.TestService_TestBidiServer) (err e
 			req, err := server.Recv()
 			if err == io.EOF {
 				log.Println("end of stream")
-				//break
+				break
 			}
 
 			log.Printf("got msg from grpc consumer %v", req)
 
 			if req.Action == "stop" {
-				finish = true
-				wg.Done()
 				break
 			}
 		}
+
+		wg.Done()
+		finish = true
 	}()
 
 	go func() {
-		for true {
+		for {
 			resp := dtproto.TestResponse{
 				Code:   456,
 				Result: "success",
@@ -53,6 +55,8 @@ func (s *GrpcService) TestBidi(server dtproto.TestService_TestBidiServer) (err e
 			if finish {
 				break
 			}
+
+			time.Sleep(1 * time.Millisecond)
 		}
 	}()
 
@@ -64,7 +68,7 @@ func (s *GrpcService) TestBidi(server dtproto.TestService_TestBidiServer) (err e
 func (s *GrpcService) TestServerStream(req *dtproto.TestRequest, server dtproto.TestService_TestServerStreamServer) (err error) {
 	log.Printf("got msg from grpc client %v", req)
 
-	for {
+	for i := 0; i < 3; i++ {
 		resp := dtproto.TestResponse{
 			Code:   456,
 			Result: "success",
